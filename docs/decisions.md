@@ -52,3 +52,16 @@ The citation validator accepts only IDs present in the exact reranked context. A
 without evidence, fabricated IDs, or citations attached to an unanswerable result are rejected.
 Rejection is converted to a standard refusal with no citations, and the reason is recorded in
 retrieval metadata. This favors false refusals over unsupported answers.
+
+## ADR-007: Two evaluation profiles in Phase 5
+
+The evaluation runner accepts any query engine and faithfulness scorer. The default deterministic
+profile uses the real ingestion, Qdrant, hybrid retrieval, answerability, and citation-validation
+service with stable local embedding and extractive-generation providers. This makes the small
+quality gate reproducible and independent of network services.
+
+Deterministic faithfulness is explicitly labeled as lexical token coverage against validated
+citation text. It is a CI-safe proxy, not an LLM-judged Ragas score. The production profile runs the
+configured Qdrant, Sentence Transformer, CrossEncoder, and Ollama providers; a release evaluation
+should inject an explicit LLM-based faithfulness scorer such as Ragas. Reports always record the
+profile and faithfulness method so the two cannot be confused.

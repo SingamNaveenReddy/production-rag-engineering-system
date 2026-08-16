@@ -1,12 +1,12 @@
 # Production-Grade RAG Engineering System
 
-A production-oriented document question-answering platform. Phase 4 implements metadata-preserving
+A production-oriented document question-answering platform. Phase 5 implements metadata-preserving
 ingestion, hybrid dense and BM25 retrieval, CrossEncoder reranking, grounded local generation,
-strict programmatic citations, fail-closed answerability validation, and a typed FastAPI interface.
+strict citations, fail-closed answerability, offline evaluation, and configurable quality gates.
 
 ## Current scope
 
-Implemented through Phase 4:
+Implemented through Phase 5:
 
 - PDF, Markdown, and TXT ingestion
 - Stable content-derived document IDs and source-aware chunk IDs
@@ -20,14 +20,18 @@ Implemented through Phase 4:
 - Strict validation of every selected chunk ID against the reranked context
 - Programmatic filename, page, chunk ID, and supporting-text citations
 - Fail-closed refusal for missing, fabricated, or inconsistent evidence
+- Golden JSONL schema and provider-neutral offline evaluation runner
+- Retrieval recall@k, faithfulness, citation accuracy, refusal accuracy, and latency metrics
+- Configurable regression thresholds with non-zero failure exit
+- Machine-readable JSON and readable Markdown reports
+- Deterministic CI profile plus a configured production-provider profile
 - Ollama-backed generation with configurable Qwen3 4B default
 - Programmatic citations derived only from retrieved chunks
 - Low-evidence refusal
-- Upload, ingest, query, list, delete, and health API routes
+- Upload, ingest, query, list, delete, evaluate, and health API routes
 - Unit and integration tests with deterministic provider substitutes
 
-Golden-dataset evaluation, CI quality gates, Langfuse, and Streamlit are later phases and are not
-claimed here.
+GitHub Actions, Langfuse, and Streamlit are later phases and are not claimed here.
 
 ## Architecture
 
@@ -96,6 +100,18 @@ accuracy was `1.000`; warm-cache median reranking latency was `12 ms`. The three
 deliberately misordered candidate pairs and measure the second stage in isolation, not end-to-end
 production RAG quality. See `evaluation/results/phase3_reranking.md`.
 
+## Phase 5 golden evaluation
+
+```bash
+make evaluate
+```
+
+The latest executed deterministic seed evaluated six manually verified cases. Retrieval recall@5,
+lexical citation faithfulness, citation accuracy, and refusal accuracy were all `1.000`; P95 latency
+was `0 ms`; the configured quality gate passed. The profile uses deterministic local providers and
+a lexical faithfulness proxy, so these are regression-fixture results rather than production-model
+quality claims. See `evaluation/results/golden_evaluation.md`.
+
 ## Configuration
 
 Defaults live in `config/default.yaml`; environment overrides are documented in `.env.example`.
@@ -103,9 +119,10 @@ No secrets, private documents, downloaded models, or Qdrant data belong in sourc
 
 ## Benchmark status
 
-Phase 2 and Phase 3 include executed, narrowly scoped retrieval and reranking regression fixtures.
-The golden dataset, end-to-end quality evaluation, and regression thresholds are Phase 5 work and
-must be based on executed evaluation runs.
+Phase 2 and Phase 3 contain narrowly scoped retrieval and reranking fixtures. Phase 5 adds an
+executed six-case golden seed and threshold gate. Expanding it to a 100-question manually verified
+corpus and running the configured production providers remain required before publishing broader
+quality claims.
 
 ## Limitations
 
@@ -116,11 +133,12 @@ must be based on executed evaluation runs.
 - First use downloads the configured embedding and CrossEncoder model; latency results should
   distinguish model initialization from warm inference.
 - Ollama and Qdrant must be running for production-provider startup and end-to-end queries.
+- Deterministic faithfulness is lexical citation-token coverage, not an LLM-judged Ragas score.
 
 ## Planned phases
 
-1. Golden-dataset evaluation and regression gates.
-2. GitHub Actions, Langfuse-compatible tracing, and a Streamlit demonstration UI.
+1. GitHub Actions and deterministic evaluation gating.
+2. Langfuse-compatible tracing and a Streamlit demonstration UI.
 
 ## Screenshot
 

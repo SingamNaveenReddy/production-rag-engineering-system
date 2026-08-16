@@ -1,0 +1,6 @@
+{"id":"auth-001","question":"What authentication device is mandatory for administrators?","expected_answer":"A FIDO2 hardware security key.","expected_sources":[{"document":"authentication_policy.md"}],"answerable":true}
+{"id":"audit-001","question":"How long must security audit logs be retained?","expected_answer":"Seven years.","expected_sources":[{"document":"audit_policy.md"}],"answerable":true}
+{"id":"vuln-001","question":"How quickly must critical vulnerabilities be patched?","expected_answer":"Within 24 hours of discovery.","expected_sources":[{"document":"vulnerability_policy.md"}],"answerable":true}
+{"id":"encrypt-001","question":"Which algorithm protects sensitive data at rest?","expected_answer":"AES-256.","expected_sources":[{"document":"encryption_policy.md"}],"answerable":true}
+{"id":"refuse-001","question":"What is the CEO's salary?","expected_answer":null,"expected_sources":[],"answerable":false}
+{"id":"refuse-002","question":"When does the office cafeteria open?","expected_answer":null,"expected_sources":[],"answerable":false}

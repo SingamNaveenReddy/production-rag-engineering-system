@@ -14,13 +14,13 @@ lint:
 	.venv/bin/ruff check .
 
 ingest:
-	.venv/bin/python scripts/ingest.py $(FILE)
+	.venv/bin/python -m scripts.ingest $(FILE)
 
 benchmark:
-	.venv/bin/python scripts/benchmark_retrieval.py
+	.venv/bin/python -m scripts.benchmark_retrieval
 
 benchmark-reranking:
-	.venv/bin/python scripts/benchmark_reranking.py
+	.venv/bin/python -m scripts.benchmark_reranking
 
 evaluate:
-	@echo "Evaluation is intentionally deferred until Phase 5."
+	.venv/bin/python -m evaluation.evaluate

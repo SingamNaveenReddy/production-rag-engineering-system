@@ -1,21 +1,46 @@
-# Evaluation status
+# Evaluation
 
-The golden-dataset runner and regression quality gate are deliberately deferred until Phase 5.
-The test suite verifies deterministic ingestion, dense and sparse retrieval behavior, hybrid fusion,
-refusal, citations, Qdrant integration, and API contracts.
+Phase 5 implements the golden-dataset runner and configurable regression gate. The seed dataset has
+six manually verified cases: four answerable policy questions and two unsupported questions. It is
+an executable framework seed, not the final 100-question production corpus.
 
-Phase 2 adds a small deterministic regression benchmark for exact technical identifiers. Its latest
-executed output is stored in `evaluation/results/phase2_retrieval.json` and summarized in
-`evaluation/results/phase2_retrieval.md`. This fixture isolates the lexical-retrieval behavior; it
-is not presented as a production corpus or overall RAG-quality benchmark.
+Run the deterministic profile:
 
-Phase 3 adds a controlled benchmark using the actual configured CrossEncoder. It measures whether
-the second stage corrects three deliberately misordered candidate pairs and records warm-cache
-latency. The latest executed output is in `evaluation/results/phase3_reranking.json` and
-`evaluation/results/phase3_reranking.md`. The fixture measures reranking behavior in isolation; it
-does not substitute for the later golden-dataset end-to-end evaluation.
+```bash
+python -m evaluation.evaluate
+```
 
-Phase 4 adds deterministic coverage for valid programmatic citations, fabricated chunk IDs,
-answerable output without citations, inconsistent unanswerable output, generator refusals, and the
-Ollama JSON-schema request/response contract. These checks verify enforcement behavior but do not
-measure semantic faithfulness; that remains part of the golden evaluation phase.
+Run configured production providers after indexing the matching corpus:
+
+```bash
+python -m evaluation.evaluate --profile production
+```
+
+Both profiles generate `evaluation/results/golden_evaluation.json` and
+`evaluation/results/golden_evaluation.md`. A failed threshold exits non-zero.
+
+## Metrics
+
+- Retrieval recall@k compares expected sources with first-stage retrieved sources.
+- Deterministic faithfulness measures answer-token coverage in validated citation text.
+- Citation accuracy compares returned citations with manually verified expected sources.
+- Refusal accuracy checks the structured answerability decision.
+- Latency reports mean, median, and P95 total query latency.
+
+The faithfulness scorer is injectable. The deterministic lexical scorer is suitable for a small,
+repeatable CI gate; release evaluation should use an explicit LLM-based scorer such as Ragas and
+record that method in the report.
+
+Install the optional Ragas adapter dependency with `pip install -e '.[evaluation]'`, construct a
+Ragas collections `Faithfulness` metric with an explicit evaluator LLM, and inject it through
+`RagasFaithfulnessScorer`. No evaluator provider or credentials are selected implicitly.
+
+## Executed result
+
+The latest deterministic run evaluated six questions and passed the configured gate. Retrieval
+recall@5, lexical citation faithfulness, citation accuracy, and refusal accuracy were all 1.000.
+P95 latency was 0 ms. These results apply only to the checked-in deterministic seed profile; they
+are not presented as production-model quality.
+
+Earlier executed retrieval and reranking fixtures remain in `evaluation/results/phase2_retrieval.*`
+and `evaluation/results/phase3_reranking.*`.

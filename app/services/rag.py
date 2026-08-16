@@ -87,6 +87,14 @@ class RagService:
             limit=self._hybrid_candidate_count,
         )
         retrieval_finished = perf_counter()
+        retrieved_sources = [
+            {
+                "document": item.chunk.metadata.filename,
+                "page": item.chunk.metadata.page,
+                "chunk_id": item.chunk.metadata.chunk_id,
+            }
+            for item in hybrid_results
+        ]
         supported_candidates = [
             result for result in hybrid_results if result.score >= self._minimum_score
         ]
@@ -99,6 +107,7 @@ class RagService:
                     "strategy": "hybrid_rrf_cross_encoder",
                     "candidate_count": len(hybrid_results),
                     "returned_count": 0,
+                    "retrieved_sources": retrieved_sources,
                     "answerability": {"status": "refused_no_retrieved_evidence"},
                     "citation_validation": {"status": "not_applicable", "validated_count": 0},
                     "timing_ms": {
@@ -117,6 +126,7 @@ class RagService:
             "strategy": "hybrid_rrf_cross_encoder",
             "candidate_count": len(hybrid_results),
             "returned_count": len(reranked),
+            "retrieved_sources": retrieved_sources,
             "hybrid_scores": [item.score for item in supported_candidates],
             "reranker_scores": [item.score for item in reranked],
             "timing_ms": {

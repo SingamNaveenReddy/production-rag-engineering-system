@@ -19,3 +19,12 @@ prompt:
   answer_file: prompts/answer_v2.yaml
 logging:
   level: INFO
+evaluation:
+  dataset_path: evaluation/golden_dataset.jsonl
+  retrieval_k: 5
+  thresholds:
+    retrieval_recall_at_k: 0.85
+    faithfulness: 0.85
+    citation_accuracy: 0.90
+    refusal_accuracy: 0.90
+    max_p95_latency_ms:

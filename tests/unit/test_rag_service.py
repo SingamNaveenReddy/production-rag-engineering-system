@@ -51,6 +51,7 @@ def test_query_returns_grounded_answer_and_programmatic_citation(tmp_path: Path)
         "status": "passed",
         "validated_count": 1,
     }
+    assert result.retrieval_metadata["retrieved_sources"][0]["document"] == "security.txt"
 
 
 def test_unsupported_question_is_refused(tmp_path: Path) -> None:

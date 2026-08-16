@@ -40,12 +40,27 @@ class LoggingConfig(BaseModel):
     level: str = "INFO"
 
 
+class EvaluationThresholds(BaseModel):
+    retrieval_recall_at_k: float = Field(default=0.85, ge=0, le=1)
+    faithfulness: float = Field(default=0.85, ge=0, le=1)
+    citation_accuracy: float = Field(default=0.90, ge=0, le=1)
+    refusal_accuracy: float = Field(default=0.90, ge=0, le=1)
+    max_p95_latency_ms: int | None = Field(default=None, ge=1)
+
+
+class EvaluationConfig(BaseModel):
+    dataset_path: Path = Path("evaluation/golden_dataset.jsonl")
+    retrieval_k: int = Field(default=5, ge=1, le=100)
+    thresholds: EvaluationThresholds = EvaluationThresholds()
+
+
 class AppConfig(BaseModel):
     chunking: ChunkingConfig = ChunkingConfig()
     retrieval: RetrievalConfig = RetrievalConfig()
     providers: ProviderConfig = ProviderConfig()
     prompt: PromptConfig = PromptConfig()
     logging: LoggingConfig = LoggingConfig()
+    evaluation: EvaluationConfig = EvaluationConfig()
 
 
 class EnvironmentSettings(BaseSettings):
