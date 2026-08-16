@@ -63,3 +63,17 @@ class MemoryVectorStore:
 class FakeGenerator:
     def generate(self, question: str, context: list[DocumentChunk]) -> str:
         return f"Grounded answer: {context[0].text}"
+
+
+class FakeReranker:
+    def rerank(
+        self, query: str, candidates: list[ScoredChunk], top_k: int
+    ) -> list[ScoredChunk]:
+        rescored = [
+            ScoredChunk(
+                chunk=candidate.chunk,
+                score=1.0 if "fido2" in candidate.chunk.text.lower() else 0.0,
+            )
+            for candidate in candidates
+        ]
+        return sorted(rescored, key=lambda item: item.score, reverse=True)[:top_k]

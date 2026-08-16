@@ -29,3 +29,14 @@ For the initial 30-100 document demo corpus, BM25 builds its statistics from sto
 time. This keeps Qdrant as the source of truth and avoids a second persistence system. A larger
 deployment should persist a sparse index or Qdrant sparse vectors and benchmark index freshness,
 memory, and latency before migration.
+
+## ADR-005: CrossEncoder as an isolated second-stage provider
+
+The first-stage hybrid retriever favors recall and returns a configurable candidate set. A
+`Reranker` interface then scores each query/chunk pair jointly using
+`cross-encoder/ms-marco-MiniLM-L-6-v2` and returns only the configured top N. Keeping reranking
+behind an interface makes tests deterministic and permits later model/latency comparisons without
+changing retrieval, generation, or API code.
+
+CrossEncoder scores replace fusion scores only after candidates pass the hybrid evidence threshold.
+Both score sets and stage-level latency measurements remain available in retrieval metadata.

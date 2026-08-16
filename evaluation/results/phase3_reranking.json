@@ -1,0 +1,43 @@
+{
+  "benchmark": "phase3-controlled-cross-encoder-reranking",
+  "model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "query_count": 3,
+  "metric": "top1_accuracy",
+  "hybrid_top1_accuracy": 0.0,
+  "hybrid_plus_reranker_top1_accuracy": 1.0,
+  "absolute_improvement": 1.0,
+  "model_load_ms": 150,
+  "median_reranking_latency_ms": 12,
+  "cases": [
+    {
+      "query": "What authentication device is mandatory for employees?",
+      "expected_chunk_id": "reranking-1-c2",
+      "hybrid_chunk_id": "reranking-1-c1",
+      "reranked_chunk_id": "reranking-1-c2",
+      "hybrid_hit": false,
+      "reranked_hit": true,
+      "reranker_score": 4.673361778259277,
+      "reranking_latency_ms": 132
+    },
+    {
+      "query": "How long must audit logs be retained?",
+      "expected_chunk_id": "reranking-2-c2",
+      "hybrid_chunk_id": "reranking-2-c1",
+      "reranked_chunk_id": "reranking-2-c2",
+      "hybrid_hit": false,
+      "reranked_hit": true,
+      "reranker_score": 9.466316223144531,
+      "reranking_latency_ms": 10
+    },
+    {
+      "query": "What action is required after a critical vulnerability is found?",
+      "expected_chunk_id": "reranking-3-c2",
+      "hybrid_chunk_id": "reranking-3-c1",
+      "reranked_chunk_id": "reranking-3-c2",
+      "hybrid_hit": false,
+      "reranked_hit": true,
+      "reranker_score": -0.056938979774713516,
+      "reranking_latency_ms": 12
+    }
+  ]
+}

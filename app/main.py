@@ -20,7 +20,7 @@ def create_app(service: RagService | None = None, config: AppConfig | None = Non
     app = FastAPI(
         title="Production RAG Engineering System",
         version="0.1.0",
-        description="Phase 1: dense retrieval with grounded local generation and citations.",
+        description="Phase 3: hybrid retrieval, CrossEncoder reranking, and grounded generation.",
         lifespan=lifespan,
     )
     app.include_router(health.router)
