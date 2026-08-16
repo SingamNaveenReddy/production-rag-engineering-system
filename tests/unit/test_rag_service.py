@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from app.models.schemas import DocumentChunk, GeneratedAnswer
 from app.services.rag import DuplicateDocumentError, RagService
 from tests.fakes import FakeEmbedder, FakeGenerator, FakeReranker, MemoryVectorStore
 
@@ -18,6 +19,24 @@ def make_service(minimum_score: float = 0.2) -> RagService:
     )
 
 
+class FabricatingGenerator:
+    def generate(self, question: str, context: list[DocumentChunk]) -> GeneratedAnswer:
+        return GeneratedAnswer(
+            answer="A fabricated answer.",
+            answerable=True,
+            supporting_chunk_ids=["invented-document-p999-c9999"],
+        )
+
+
+class RefusingGenerator:
+    def generate(self, question: str, context: list[DocumentChunk]) -> GeneratedAnswer:
+        return GeneratedAnswer(
+            answer="There is not enough evidence.",
+            answerable=False,
+            supporting_chunk_ids=[],
+        )
+
+
 def test_query_returns_grounded_answer_and_programmatic_citation(tmp_path: Path) -> None:
     source = tmp_path / "security.txt"
     source.write_text("Authentication requires a hardware security key.", encoding="utf-8")
@@ -28,6 +47,10 @@ def test_query_returns_grounded_answer_and_programmatic_citation(tmp_path: Path)
     assert result.citations[0].document == "security.txt"
     assert result.citations[0].chunk_id.startswith(summary.document_id)
     assert result.retrieval_metadata["strategy"] == "hybrid_rrf_cross_encoder"
+    assert result.retrieval_metadata["citation_validation"] == {
+        "status": "passed",
+        "validated_count": 1,
+    }
 
 
 def test_unsupported_question_is_refused(tmp_path: Path) -> None:
@@ -47,6 +70,50 @@ def test_duplicate_document_is_rejected(tmp_path: Path) -> None:
     service.ingest(source)
     with pytest.raises(DuplicateDocumentError):
         service.ingest(source)
+
+
+def test_fabricated_generator_citation_fails_closed(tmp_path: Path) -> None:
+    source = tmp_path / "security.txt"
+    source.write_text("Authentication requires a hardware key.", encoding="utf-8")
+    service = RagService(
+        embedder=FakeEmbedder(),
+        store=MemoryVectorStore(),
+        generator=FabricatingGenerator(),
+        chunk_size=20,
+        chunk_overlap=5,
+        dense_top_k=5,
+        minimum_score=0.2,
+    )
+    service.ingest(source)
+
+    result = service.query("What authentication is required?")
+
+    assert result.answerable is False
+    assert result.citations == []
+    assert result.retrieval_metadata["citation_validation"]["reason"] == (
+        "fabricated_citation"
+    )
+
+
+def test_generator_can_explicitly_refuse_supported_candidates(tmp_path: Path) -> None:
+    source = tmp_path / "security.txt"
+    source.write_text("Authentication requires a hardware key.", encoding="utf-8")
+    service = RagService(
+        embedder=FakeEmbedder(),
+        store=MemoryVectorStore(),
+        generator=RefusingGenerator(),
+        chunk_size=20,
+        chunk_overlap=5,
+        dense_top_k=5,
+        minimum_score=0.2,
+    )
+    service.ingest(source)
+
+    result = service.query("What authentication is required?")
+
+    assert result.answerable is False
+    assert result.citations == []
+    assert result.retrieval_metadata["answerability"]["status"] == "refused_by_generator"
 
 
 def test_reranking_changes_order_and_records_latency(tmp_path: Path) -> None:

@@ -8,7 +8,7 @@ run:
 	.venv/bin/uvicorn app.main:app --reload
 
 test:
-	.venv/bin/pytest
+	.venv/bin/python -m pytest
 
 lint:
 	.venv/bin/ruff check .

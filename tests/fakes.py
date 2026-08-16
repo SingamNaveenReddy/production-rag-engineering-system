@@ -4,7 +4,7 @@ import re
 from collections import Counter
 from math import sqrt
 
-from app.models.schemas import DocumentChunk, DocumentSummary, ScoredChunk
+from app.models.schemas import DocumentChunk, DocumentSummary, GeneratedAnswer, ScoredChunk
 
 
 class FakeEmbedder:
@@ -61,8 +61,12 @@ class MemoryVectorStore:
 
 
 class FakeGenerator:
-    def generate(self, question: str, context: list[DocumentChunk]) -> str:
-        return f"Grounded answer: {context[0].text}"
+    def generate(self, question: str, context: list[DocumentChunk]) -> GeneratedAnswer:
+        return GeneratedAnswer(
+            answer=f"Grounded answer: {context[0].text}",
+            answerable=True,
+            supporting_chunk_ids=[context[0].metadata.chunk_id],
+        )
 
 
 class FakeReranker:

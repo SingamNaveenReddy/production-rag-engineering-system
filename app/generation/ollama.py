@@ -3,7 +3,7 @@ from __future__ import annotations
 import httpx
 
 from app.generation.prompts import PromptTemplate
-from app.models.schemas import DocumentChunk
+from app.models.schemas import DocumentChunk, GeneratedAnswer
 
 
 class OllamaGenerator:
@@ -15,7 +15,7 @@ class OllamaGenerator:
         self._prompt = prompt
         self._timeout = timeout
 
-    def generate(self, question: str, context: list[DocumentChunk]) -> str:
+    def generate(self, question: str, context: list[DocumentChunk]) -> GeneratedAnswer:
         rendered_context = "\n\n".join(
             f"[{chunk.metadata.chunk_id}] {chunk.text}" for chunk in context
         )
@@ -31,9 +31,11 @@ class OllamaGenerator:
                         "content": self._prompt.render(question=question, context=rendered_context),
                     },
                 ],
+                "format": GeneratedAnswer.model_json_schema(),
                 "options": {"temperature": 0},
             },
             timeout=self._timeout,
         )
         response.raise_for_status()
-        return str(response.json()["message"]["content"]).strip()
+        content = str(response.json()["message"]["content"]).strip()
+        return GeneratedAnswer.model_validate_json(content)

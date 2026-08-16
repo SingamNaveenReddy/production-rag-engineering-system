@@ -1,12 +1,12 @@
 # Production-Grade RAG Engineering System
 
-A production-oriented document question-answering platform. Phase 3 implements metadata-preserving
+A production-oriented document question-answering platform. Phase 4 implements metadata-preserving
 ingestion, hybrid dense and BM25 retrieval, CrossEncoder reranking, grounded local generation,
-programmatic citations, explicit low-evidence refusal, and a typed FastAPI interface.
+strict programmatic citations, fail-closed answerability validation, and a typed FastAPI interface.
 
 ## Current scope
 
-Implemented through Phase 3:
+Implemented through Phase 4:
 
 - PDF, Markdown, and TXT ingestion
 - Stable content-derived document IDs and source-aware chunk IDs
@@ -16,6 +16,10 @@ Implemented through Phase 3:
 - Normalized reciprocal rank fusion across dense and sparse rankings
 - Configurable hybrid candidate retrieval and CrossEncoder top-N reranking
 - Retrieval, reranking, generation, and total latency measurements
+- Pydantic-schema-constrained Ollama generation output
+- Strict validation of every selected chunk ID against the reranked context
+- Programmatic filename, page, chunk ID, and supporting-text citations
+- Fail-closed refusal for missing, fabricated, or inconsistent evidence
 - Ollama-backed generation with configurable Qwen3 4B default
 - Programmatic citations derived only from retrieved chunks
 - Low-evidence refusal
@@ -99,8 +103,9 @@ No secrets, private documents, downloaded models, or Qdrant data belong in sourc
 
 ## Benchmark status
 
-No benchmark values are reported yet. The golden dataset, comparative retrieval benchmarks, and
-quality regression thresholds are Phase 5 work and must be based on executed evaluation runs.
+Phase 2 and Phase 3 include executed, narrowly scoped retrieval and reranking regression fixtures.
+The golden dataset, end-to-end quality evaluation, and regression thresholds are Phase 5 work and
+must be based on executed evaluation runs.
 
 ## Limitations
 
@@ -114,9 +119,8 @@ quality regression thresholds are Phase 5 work and must be based on executed eva
 
 ## Planned phases
 
-1. Citation enforcement and richer answerability validation.
-2. Golden-dataset evaluation and regression gates.
-3. GitHub Actions, Langfuse-compatible tracing, and a Streamlit demonstration UI.
+1. Golden-dataset evaluation and regression gates.
+2. GitHub Actions, Langfuse-compatible tracing, and a Streamlit demonstration UI.
 
 ## Screenshot
 

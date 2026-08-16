@@ -16,6 +16,6 @@ providers:
   embedding_model: sentence-transformers/all-MiniLM-L6-v2
   reranker_model: cross-encoder/ms-marco-MiniLM-L-6-v2
 prompt:
-  answer_file: prompts/answer_v1.yaml
+  answer_file: prompts/answer_v2.yaml
 logging:
   level: INFO

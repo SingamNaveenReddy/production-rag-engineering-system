@@ -40,3 +40,15 @@ changing retrieval, generation, or API code.
 
 CrossEncoder scores replace fusion scores only after candidates pass the hybrid evidence threshold.
 Both score sets and stage-level latency measurements remain available in retrieval metadata.
+
+## ADR-006: Fail-closed structured grounding in Phase 4
+
+The generator returns a validated `GeneratedAnswer` containing `answer`, `answerable`, and
+`supporting_chunk_ids`. Ollama receives the Pydantic JSON schema through its structured-output
+`format` field. The model may select evidence IDs but never supplies filenames, pages, or supporting
+text.
+
+The citation validator accepts only IDs present in the exact reranked context. Answerable output
+without evidence, fabricated IDs, or citations attached to an unanswerable result are rejected.
+Rejection is converted to a standard refusal with no citations, and the reason is recorded in
+retrieval metadata. This favors false refusals over unsupported answers.
