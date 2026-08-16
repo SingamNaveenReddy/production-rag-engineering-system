@@ -29,3 +29,39 @@ For the initial 30-100 document demo corpus, BM25 builds its statistics from sto
 time. This keeps Qdrant as the source of truth and avoids a second persistence system. A larger
 deployment should persist a sparse index or Qdrant sparse vectors and benchmark index freshness,
 memory, and latency before migration.
+
+## ADR-005: CrossEncoder as an isolated second-stage provider
+
+The first-stage hybrid retriever favors recall and returns a configurable candidate set. A
+`Reranker` interface then scores each query/chunk pair jointly using
+`cross-encoder/ms-marco-MiniLM-L-6-v2` and returns only the configured top N. Keeping reranking
+behind an interface makes tests deterministic and permits later model/latency comparisons without
+changing retrieval, generation, or API code.
+
+CrossEncoder scores replace fusion scores only after candidates pass the hybrid evidence threshold.
+Both score sets and stage-level latency measurements remain available in retrieval metadata.
+
+## ADR-006: Fail-closed structured grounding in Phase 4
+
+The generator returns a validated `GeneratedAnswer` containing `answer`, `answerable`, and
+`supporting_chunk_ids`. Ollama receives the Pydantic JSON schema through its structured-output
+`format` field. The model may select evidence IDs but never supplies filenames, pages, or supporting
+text.
+
+The citation validator accepts only IDs present in the exact reranked context. Answerable output
+without evidence, fabricated IDs, or citations attached to an unanswerable result are rejected.
+Rejection is converted to a standard refusal with no citations, and the reason is recorded in
+retrieval metadata. This favors false refusals over unsupported answers.
+
+## ADR-007: Two evaluation profiles in Phase 5
+
+The evaluation runner accepts any query engine and faithfulness scorer. The default deterministic
+profile uses the real ingestion, Qdrant, hybrid retrieval, answerability, and citation-validation
+service with stable local embedding and extractive-generation providers. This makes the small
+quality gate reproducible and independent of network services.
+
+Deterministic faithfulness is explicitly labeled as lexical token coverage against validated
+citation text. It is a CI-safe proxy, not an LLM-judged Ragas score. The production profile runs the
+configured Qdrant, Sentence Transformer, CrossEncoder, and Ollama providers; a release evaluation
+should inject an explicit LLM-based faithfulness scorer such as Ragas. Reports always record the
+profile and faithfulness method so the two cannot be confused.

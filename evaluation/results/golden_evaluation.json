@@ -1,0 +1,84 @@
+{
+  "profile": "deterministic",
+  "dataset": "evaluation/golden_dataset.jsonl",
+  "questions_evaluated": 6,
+  "retrieval_k": 5,
+  "faithfulness_method": "lexical_citation_token_coverage",
+  "metrics": {
+    "retrieval_recall_at_k": 1.0,
+    "faithfulness": 1.0,
+    "citation_accuracy": 1.0,
+    "refusal_accuracy": 1.0,
+    "latency": {
+      "mean_ms": 0.0,
+      "median_ms": 0.0,
+      "p95_ms": 0
+    }
+  },
+  "quality_gate": {
+    "passed": true,
+    "failures": []
+  },
+  "cases": [
+    {
+      "case_id": "auth-001",
+      "answerable_expected": true,
+      "answerable_actual": true,
+      "retrieval_recall_at_k": 1.0,
+      "faithfulness": 1.0,
+      "citation_accuracy": 1.0,
+      "refusal_correct": true,
+      "latency_ms": 0
+    },
+    {
+      "case_id": "audit-001",
+      "answerable_expected": true,
+      "answerable_actual": true,
+      "retrieval_recall_at_k": 1.0,
+      "faithfulness": 1.0,
+      "citation_accuracy": 1.0,
+      "refusal_correct": true,
+      "latency_ms": 0
+    },
+    {
+      "case_id": "vuln-001",
+      "answerable_expected": true,
+      "answerable_actual": true,
+      "retrieval_recall_at_k": 1.0,
+      "faithfulness": 1.0,
+      "citation_accuracy": 1.0,
+      "refusal_correct": true,
+      "latency_ms": 0
+    },
+    {
+      "case_id": "encrypt-001",
+      "answerable_expected": true,
+      "answerable_actual": true,
+      "retrieval_recall_at_k": 1.0,
+      "faithfulness": 1.0,
+      "citation_accuracy": 1.0,
+      "refusal_correct": true,
+      "latency_ms": 0
+    },
+    {
+      "case_id": "refuse-001",
+      "answerable_expected": false,
+      "answerable_actual": false,
+      "retrieval_recall_at_k": null,
+      "faithfulness": null,
+      "citation_accuracy": null,
+      "refusal_correct": true,
+      "latency_ms": 0
+    },
+    {
+      "case_id": "refuse-002",
+      "answerable_expected": false,
+      "answerable_actual": false,
+      "retrieval_recall_at_k": null,
+      "faithfulness": null,
+      "citation_accuracy": null,
+      "refusal_correct": true,
+      "latency_ms": 0
+    }
+  ]
+}

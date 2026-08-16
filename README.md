@@ -1,12 +1,12 @@
 # Production-Grade RAG Engineering System
 
-A production-oriented document question-answering platform. Phase 2 implements metadata-preserving
-ingestion, hybrid dense and BM25 retrieval, grounded local generation, programmatic citations,
-explicit low-evidence refusal, and a typed FastAPI interface.
+A production-oriented document question-answering platform. Phase 5 implements metadata-preserving
+ingestion, hybrid dense and BM25 retrieval, CrossEncoder reranking, grounded local generation,
+strict citations, fail-closed answerability, offline evaluation, and configurable quality gates.
 
 ## Current scope
 
-Implemented through Phase 2:
+Implemented through Phase 5:
 
 - PDF, Markdown, and TXT ingestion
 - Stable content-derived document IDs and source-aware chunk IDs
@@ -14,14 +14,24 @@ Implemented through Phase 2:
 - Sentence Transformer embeddings and Qdrant cosine retrieval
 - BM25 sparse retrieval that preserves dotted and hyphenated technical identifiers
 - Normalized reciprocal rank fusion across dense and sparse rankings
+- Configurable hybrid candidate retrieval and CrossEncoder top-N reranking
+- Retrieval, reranking, generation, and total latency measurements
+- Pydantic-schema-constrained Ollama generation output
+- Strict validation of every selected chunk ID against the reranked context
+- Programmatic filename, page, chunk ID, and supporting-text citations
+- Fail-closed refusal for missing, fabricated, or inconsistent evidence
+- Golden JSONL schema and provider-neutral offline evaluation runner
+- Retrieval recall@k, faithfulness, citation accuracy, refusal accuracy, and latency metrics
+- Configurable regression thresholds with non-zero failure exit
+- Machine-readable JSON and readable Markdown reports
+- Deterministic CI profile plus a configured production-provider profile
 - Ollama-backed generation with configurable Qwen3 4B default
 - Programmatic citations derived only from retrieved chunks
 - Low-evidence refusal
-- Upload, ingest, query, list, delete, and health API routes
+- Upload, ingest, query, list, delete, evaluate, and health API routes
 - Unit and integration tests with deterministic provider substitutes
 
-CrossEncoder reranking, golden-dataset evaluation, CI quality gates, Langfuse, and Streamlit are
-later phases and are not claimed here.
+GitHub Actions, Langfuse, and Streamlit are later phases and are not claimed here.
 
 ## Architecture
 
@@ -78,6 +88,30 @@ hybrid recall@1 of `1.000`, an absolute improvement of `0.667`. This deliberatel
 fixture proves lexical recovery for identifiers the deterministic dense baseline cannot represent;
 it is not a production-corpus quality claim. See `evaluation/results/phase2_retrieval.md`.
 
+## Phase 3 reranking benchmark
+
+```bash
+make benchmark-reranking
+```
+
+The latest executed controlled benchmark used the actual
+`cross-encoder/ms-marco-MiniLM-L-6-v2` model. Hybrid-only top-1 accuracy was `0.000`; reranked top-1
+accuracy was `1.000`; warm-cache median reranking latency was `12 ms`. The three cases are
+deliberately misordered candidate pairs and measure the second stage in isolation, not end-to-end
+production RAG quality. See `evaluation/results/phase3_reranking.md`.
+
+## Phase 5 golden evaluation
+
+```bash
+make evaluate
+```
+
+The latest executed deterministic seed evaluated six manually verified cases. Retrieval recall@5,
+lexical citation faithfulness, citation accuracy, and refusal accuracy were all `1.000`; P95 latency
+was `0 ms`; the configured quality gate passed. The profile uses deterministic local providers and
+a lexical faithfulness proxy, so these are regression-fixture results rather than production-model
+quality claims. See `evaluation/results/golden_evaluation.md`.
+
 ## Configuration
 
 Defaults live in `config/default.yaml`; environment overrides are documented in `.env.example`.
@@ -85,8 +119,10 @@ No secrets, private documents, downloaded models, or Qdrant data belong in sourc
 
 ## Benchmark status
 
-No benchmark values are reported yet. The golden dataset, comparative retrieval benchmarks, and
-quality regression thresholds are Phase 5 work and must be based on executed evaluation runs.
+Phase 2 and Phase 3 contain narrowly scoped retrieval and reranking fixtures. Phase 5 adds an
+executed six-case golden seed and threshold gate. Expanding it to a 100-question manually verified
+corpus and running the configured production providers remain required before publishing broader
+quality claims.
 
 ## Limitations
 
@@ -94,14 +130,15 @@ quality regression thresholds are Phase 5 work and must be based on executed eva
 - The evidence threshold is a configurable baseline, not a calibrated confidence probability.
 - BM25 statistics are currently computed from stored chunks at query time; larger corpora should
   benchmark a persisted sparse index or Qdrant sparse vectors.
+- First use downloads the configured embedding and CrossEncoder model; latency results should
+  distinguish model initialization from warm inference.
 - Ollama and Qdrant must be running for production-provider startup and end-to-end queries.
+- Deterministic faithfulness is lexical citation-token coverage, not an LLM-judged Ragas score.
 
 ## Planned phases
 
-1. CrossEncoder reranking and latency benchmarks.
-2. Citation enforcement and richer answerability validation.
-3. Golden-dataset evaluation and regression gates.
-4. GitHub Actions, Langfuse-compatible tracing, and a Streamlit demonstration UI.
+1. GitHub Actions and deterministic evaluation gating.
+2. Langfuse-compatible tracing and a Streamlit demonstration UI.
 
 ## Screenshot
 

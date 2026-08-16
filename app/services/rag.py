@@ -5,11 +5,12 @@ from time import perf_counter
 
 from app.embeddings.base import Embedder
 from app.generation.base import AnswerGenerator
-from app.generation.citations import citations_from_retrieval
+from app.generation.citations import CitationValidationError, validate_citations
 from app.ingestion.chunker import chunk_pages
 from app.ingestion.loaders import load_document
 from app.ingestion.metadata import document_id_for
 from app.models.schemas import DocumentSummary, QueryResult
+from app.reranking.base import PassthroughReranker, Reranker
 from app.retrieval.dense import DenseRetriever
 from app.retrieval.hybrid import HybridRetriever
 from app.retrieval.sparse import SparseRetriever
@@ -36,6 +37,8 @@ class RagService:
         sparse_top_k: int = 5,
         hybrid_candidate_count: int = 30,
         rrf_k: int = 60,
+        reranker: Reranker | None = None,
+        reranker_top_k: int = 5,
     ) -> None:
         self._embedder = embedder
         self._store = store
@@ -53,6 +56,8 @@ class RagService:
         self._sparse_top_k = sparse_top_k
         self._hybrid_candidate_count = hybrid_candidate_count
         self._minimum_score = minimum_score
+        self._reranker = reranker or PassthroughReranker()
+        self._reranker_top_k = reranker_top_k
 
     def ingest(self, path: Path) -> DocumentSummary:
         document_id = document_id_for(path)
@@ -74,33 +79,102 @@ class RagService:
 
     def query(self, question: str, top_k: int | None = None) -> QueryResult:
         started = perf_counter()
-        requested_limit = top_k or self._dense_top_k
-        results = self._retriever.retrieve(
+        requested_limit = top_k or self._reranker_top_k
+        hybrid_results = self._retriever.retrieve(
             question,
             dense_top_k=max(self._dense_top_k, self._hybrid_candidate_count),
             sparse_top_k=max(self._sparse_top_k, self._hybrid_candidate_count),
-            limit=requested_limit,
+            limit=self._hybrid_candidate_count,
         )
-        supported = [result for result in results if result.score >= self._minimum_score]
-        if not supported:
+        retrieval_finished = perf_counter()
+        retrieved_sources = [
+            {
+                "document": item.chunk.metadata.filename,
+                "page": item.chunk.metadata.page,
+                "chunk_id": item.chunk.metadata.chunk_id,
+            }
+            for item in hybrid_results
+        ]
+        supported_candidates = [
+            result for result in hybrid_results if result.score >= self._minimum_score
+        ]
+        if not supported_candidates:
             return QueryResult(
                 answer=REFUSAL,
                 answerable=False,
                 citations=[],
-                retrieval_metadata={"strategy": "hybrid_rrf", "candidate_count": len(results)},
+                retrieval_metadata={
+                    "strategy": "hybrid_rrf_cross_encoder",
+                    "candidate_count": len(hybrid_results),
+                    "returned_count": 0,
+                    "retrieved_sources": retrieved_sources,
+                    "answerability": {"status": "refused_no_retrieved_evidence"},
+                    "citation_validation": {"status": "not_applicable", "validated_count": 0},
+                    "timing_ms": {
+                        "retrieval": _milliseconds(started, retrieval_finished),
+                        "reranking": 0,
+                        "generation": 0,
+                    },
+                },
                 latency_ms=int((perf_counter() - started) * 1000),
             )
-        answer = self._generator.generate(question, [item.chunk for item in supported])
-        return QueryResult(
-            answer=answer,
-            answerable=True,
-            citations=citations_from_retrieval(supported),
-            retrieval_metadata={
-                "strategy": "hybrid_rrf",
-                "candidate_count": len(results),
-                "scores": [item.score for item in supported],
+        reranked = self._reranker.rerank(question, supported_candidates, requested_limit)
+        reranking_finished = perf_counter()
+        generated = self._generator.generate(question, [item.chunk for item in reranked])
+        generation_finished = perf_counter()
+        metadata: dict[str, object] = {
+            "strategy": "hybrid_rrf_cross_encoder",
+            "candidate_count": len(hybrid_results),
+            "returned_count": len(reranked),
+            "retrieved_sources": retrieved_sources,
+            "hybrid_scores": [item.score for item in supported_candidates],
+            "reranker_scores": [item.score for item in reranked],
+            "timing_ms": {
+                "retrieval": _milliseconds(started, retrieval_finished),
+                "reranking": _milliseconds(retrieval_finished, reranking_finished),
+                "generation": _milliseconds(reranking_finished, generation_finished),
             },
-            latency_ms=int((perf_counter() - started) * 1000),
+        }
+        try:
+            citations = validate_citations(generated, reranked)
+        except CitationValidationError as exc:
+            metadata["answerability"] = {"status": "refused_validation_failure"}
+            metadata["citation_validation"] = {
+                "status": "rejected",
+                "reason": exc.code,
+                "validated_count": 0,
+            }
+            return QueryResult(
+                answer=REFUSAL,
+                answerable=False,
+                citations=[],
+                retrieval_metadata=metadata,
+                latency_ms=_milliseconds(started, generation_finished),
+            )
+        if not generated.answerable:
+            metadata["answerability"] = {"status": "refused_by_generator"}
+            metadata["citation_validation"] = {
+                "status": "not_applicable",
+                "validated_count": 0,
+            }
+            return QueryResult(
+                answer=REFUSAL,
+                answerable=False,
+                citations=[],
+                retrieval_metadata=metadata,
+                latency_ms=_milliseconds(started, generation_finished),
+            )
+        metadata["answerability"] = {"status": "answerable"}
+        metadata["citation_validation"] = {
+            "status": "passed",
+            "validated_count": len(citations),
+        }
+        return QueryResult(
+            answer=generated.answer,
+            answerable=True,
+            citations=citations,
+            retrieval_metadata=metadata,
+            latency_ms=_milliseconds(started, generation_finished),
         )
 
     def list_documents(self) -> list[DocumentSummary]:
@@ -108,3 +182,7 @@ class RagService:
 
     def delete_document(self, document_id: str) -> bool:
         return self._store.delete_document(document_id)
+
+
+def _milliseconds(started: float, finished: float) -> int:
+    return max(0, int((finished - started) * 1000))

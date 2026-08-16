@@ -21,7 +21,8 @@ def test_phase_one_api(tmp_path: Path) -> None:
     app = create_app(service=service)
     with TestClient(app) as client:
         health = client.get("/health")
-        assert health.json() == {"status": "ok", "phase": "phase-1"}
+        assert health.json() == {"status": "ok", "phase": "phase-5"}
+        assert "/evaluate" in client.get("/openapi.json").json()["paths"]
 
         uploaded = client.post(
             "/documents/upload",

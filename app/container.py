@@ -10,6 +10,7 @@ def build_rag_service(config: AppConfig) -> RagService:
     from app.embeddings.sentence_transformer import SentenceTransformerEmbedder
     from app.generation.ollama import OllamaGenerator
     from app.generation.prompts import PromptTemplate
+    from app.reranking.cross_encoder import CrossEncoderReranker
     from app.vectorstore.qdrant_store import QdrantVectorStore
 
     embedder = SentenceTransformerEmbedder(config.providers.embedding_model)
@@ -23,6 +24,7 @@ def build_rag_service(config: AppConfig) -> RagService:
         config.providers.llm_model,
         PromptTemplate(config.prompt.answer_file),
     )
+    reranker = CrossEncoderReranker(config.providers.reranker_model)
     return RagService(
         embedder=embedder,
         store=store,
@@ -34,4 +36,6 @@ def build_rag_service(config: AppConfig) -> RagService:
         sparse_top_k=config.retrieval.sparse_top_k,
         hybrid_candidate_count=config.retrieval.hybrid_candidate_count,
         rrf_k=config.retrieval.rrf_k,
+        reranker=reranker,
+        reranker_top_k=config.retrieval.reranker_top_k,
     )

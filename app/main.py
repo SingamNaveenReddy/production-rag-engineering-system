@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.routes import documents, health, query
+from app.api.routes import documents, evaluation, health, query
 from app.config import AppConfig, get_config
 from app.services.rag import RagService
 
@@ -20,12 +20,13 @@ def create_app(service: RagService | None = None, config: AppConfig | None = Non
     app = FastAPI(
         title="Production RAG Engineering System",
         version="0.1.0",
-        description="Phase 1: dense retrieval with grounded local generation and citations.",
+        description="Phase 5: grounded RAG with offline evaluation and quality thresholds.",
         lifespan=lifespan,
     )
     app.include_router(health.router)
     app.include_router(documents.router)
     app.include_router(query.router)
+    app.include_router(evaluation.router)
     return app
 
 

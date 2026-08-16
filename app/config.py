@@ -18,6 +18,7 @@ class RetrievalConfig(BaseModel):
     dense_top_k: int = Field(default=5, ge=1, le=100)
     sparse_top_k: int = Field(default=5, ge=1, le=100)
     hybrid_candidate_count: int = Field(default=30, ge=1, le=200)
+    reranker_top_k: int = Field(default=5, ge=1, le=100)
     rrf_k: int = Field(default=60, ge=1, le=1_000)
     minimum_score: float = Field(default=0.25, ge=-1, le=1)
 
@@ -28,6 +29,7 @@ class ProviderConfig(BaseModel):
     ollama_base_url: str = "http://localhost:11434"
     llm_model: str = "qwen3:4b"
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 
 class PromptConfig(BaseModel):
@@ -38,12 +40,27 @@ class LoggingConfig(BaseModel):
     level: str = "INFO"
 
 
+class EvaluationThresholds(BaseModel):
+    retrieval_recall_at_k: float = Field(default=0.85, ge=0, le=1)
+    faithfulness: float = Field(default=0.85, ge=0, le=1)
+    citation_accuracy: float = Field(default=0.90, ge=0, le=1)
+    refusal_accuracy: float = Field(default=0.90, ge=0, le=1)
+    max_p95_latency_ms: int | None = Field(default=None, ge=1)
+
+
+class EvaluationConfig(BaseModel):
+    dataset_path: Path = Path("evaluation/golden_dataset.jsonl")
+    retrieval_k: int = Field(default=5, ge=1, le=100)
+    thresholds: EvaluationThresholds = EvaluationThresholds()
+
+
 class AppConfig(BaseModel):
     chunking: ChunkingConfig = ChunkingConfig()
     retrieval: RetrievalConfig = RetrievalConfig()
     providers: ProviderConfig = ProviderConfig()
     prompt: PromptConfig = PromptConfig()
     logging: LoggingConfig = LoggingConfig()
+    evaluation: EvaluationConfig = EvaluationConfig()
 
 
 class EnvironmentSettings(BaseSettings):
@@ -55,6 +72,7 @@ class EnvironmentSettings(BaseSettings):
     ollama_base_url: str | None = None
     llm_model: str | None = None
     embedding_model: str | None = None
+    reranker_model: str | None = None
     log_level: str | None = None
 
 
@@ -70,6 +88,7 @@ def load_config(settings: EnvironmentSettings | None = None) -> AppConfig:
         "ollama_base_url": env.ollama_base_url,
         "llm_model": env.llm_model,
         "embedding_model": env.embedding_model,
+        "reranker_model": env.reranker_model,
     }
     for name, value in overrides.items():
         if value is not None:
