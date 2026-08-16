@@ -1,0 +1,17 @@
+chunking:
+  chunk_size: 700
+  chunk_overlap: 100
+retrieval:
+  dense_top_k: 5
+  minimum_score: 0.25
+providers:
+  qdrant_url: http://localhost:6333
+  qdrant_collection: documents
+  ollama_base_url: http://localhost:11434
+  llm_model: qwen3:4b
+  embedding_model: sentence-transformers/all-MiniLM-L6-v2
+prompt:
+  answer_file: prompts/answer_v1.yaml
+logging:
+  level: INFO
+

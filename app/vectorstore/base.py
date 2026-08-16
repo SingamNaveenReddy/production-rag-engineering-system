@@ -1,0 +1,18 @@
+from __future__ import annotations
+
+from typing import Protocol
+
+from app.models.schemas import DocumentChunk, DocumentSummary, ScoredChunk
+
+
+class VectorStore(Protocol):
+    def upsert(self, chunks: list[DocumentChunk], vectors: list[list[float]]) -> None: ...
+
+    def search(self, vector: list[float], limit: int) -> list[ScoredChunk]: ...
+
+    def list_documents(self) -> list[DocumentSummary]: ...
+
+    def delete_document(self, document_id: str) -> bool: ...
+
+    def contains_document(self, document_id: str) -> bool: ...
+
