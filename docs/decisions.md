@@ -65,3 +65,15 @@ citation text. It is a CI-safe proxy, not an LLM-judged Ragas score. The product
 configured Qdrant, Sentence Transformer, CrossEncoder, and Ollama providers; a release evaluation
 should inject an explicit LLM-based faithfulness scorer such as Ragas. Reports always record the
 profile and faithfulness method so the two cannot be confused.
+
+## ADR-008: One deterministic pull-request quality gate in Phase 6
+
+Pull requests run lint, unit tests, integration tests, and the small deterministic evaluation in one
+GitHub Actions job on Python 3.12. Keeping the checks in one job avoids repeated installation of the
+large base dependency set and gives branch protection one unambiguous required status check.
+
+The workflow grants only `contents: read` and uses the `pull_request` event, not
+`pull_request_target`, so untrusted change code does not receive write permissions or repository
+secrets. Evaluation uses the checked-in thresholds and network-free deterministic profile. The
+existing evaluator's non-zero regression exit is the sole source of gate truth, preventing CI logic
+from duplicating metric calculations.

@@ -1,4 +1,4 @@
-.PHONY: setup run test lint ingest benchmark benchmark-reranking evaluate
+.PHONY: setup run test test-unit test-integration lint ingest benchmark benchmark-reranking evaluate ci
 
 setup:
 	python3.12 -m venv .venv
@@ -9,6 +9,12 @@ run:
 
 test:
 	.venv/bin/python -m pytest
+
+test-unit:
+	.venv/bin/python -m pytest tests/unit
+
+test-integration:
+	.venv/bin/python -m pytest tests/integration
 
 lint:
 	.venv/bin/ruff check .
@@ -24,3 +30,5 @@ benchmark-reranking:
 
 evaluate:
 	.venv/bin/python -m evaluation.evaluate
+
+ci: lint test-unit test-integration evaluate

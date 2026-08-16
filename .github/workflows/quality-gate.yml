@@ -1,0 +1,50 @@
+name: RAG quality gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rag-quality-gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gate:
+    name: Lint, tests, and deterministic evaluation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install project and test dependencies
+        run: python -m pip install -e '.[dev]'
+
+      - name: Lint
+        run: python -m ruff check .
+
+      - name: Unit tests
+        run: python -m pytest tests/unit
+
+      - name: Integration tests
+        run: python -m pytest tests/integration
+
+      - name: Deterministic RAG quality gate
+        run: >-
+          python -m evaluation.evaluate
+          --profile deterministic
+          --output-directory "${RUNNER_TEMP}/rag-evaluation-results"
