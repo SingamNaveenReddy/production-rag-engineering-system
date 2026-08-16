@@ -22,6 +22,12 @@ class ScoredChunk(BaseModel):
     score: float
 
 
+class GeneratedAnswer(BaseModel):
+    answer: str = Field(min_length=1)
+    answerable: bool
+    supporting_chunk_ids: list[str]
+
+
 class Citation(BaseModel):
     document: str
     page: int | None = None
@@ -55,4 +61,3 @@ class DocumentSummary(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     phase: str
-

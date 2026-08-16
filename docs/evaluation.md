@@ -14,3 +14,8 @@ the second stage corrects three deliberately misordered candidate pairs and reco
 latency. The latest executed output is in `evaluation/results/phase3_reranking.json` and
 `evaluation/results/phase3_reranking.md`. The fixture measures reranking behavior in isolation; it
 does not substitute for the later golden-dataset end-to-end evaluation.
+
+Phase 4 adds deterministic coverage for valid programmatic citations, fabricated chunk IDs,
+answerable output without citations, inconsistent unanswerable output, generator refusals, and the
+Ollama JSON-schema request/response contract. These checks verify enforcement behavior but do not
+measure semantic faithfulness; that remains part of the golden evaluation phase.

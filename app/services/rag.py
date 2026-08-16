@@ -5,7 +5,7 @@ from time import perf_counter
 
 from app.embeddings.base import Embedder
 from app.generation.base import AnswerGenerator
-from app.generation.citations import citations_from_retrieval
+from app.generation.citations import CitationValidationError, validate_citations
 from app.ingestion.chunker import chunk_pages
 from app.ingestion.loaders import load_document
 from app.ingestion.metadata import document_id_for
@@ -99,6 +99,8 @@ class RagService:
                     "strategy": "hybrid_rrf_cross_encoder",
                     "candidate_count": len(hybrid_results),
                     "returned_count": 0,
+                    "answerability": {"status": "refused_no_retrieved_evidence"},
+                    "citation_validation": {"status": "not_applicable", "validated_count": 0},
                     "timing_ms": {
                         "retrieval": _milliseconds(started, retrieval_finished),
                         "reranking": 0,
@@ -109,24 +111,59 @@ class RagService:
             )
         reranked = self._reranker.rerank(question, supported_candidates, requested_limit)
         reranking_finished = perf_counter()
-        answer = self._generator.generate(question, [item.chunk for item in reranked])
+        generated = self._generator.generate(question, [item.chunk for item in reranked])
         generation_finished = perf_counter()
-        return QueryResult(
-            answer=answer,
-            answerable=True,
-            citations=citations_from_retrieval(reranked),
-            retrieval_metadata={
-                "strategy": "hybrid_rrf_cross_encoder",
-                "candidate_count": len(hybrid_results),
-                "returned_count": len(reranked),
-                "hybrid_scores": [item.score for item in supported_candidates],
-                "reranker_scores": [item.score for item in reranked],
-                "timing_ms": {
-                    "retrieval": _milliseconds(started, retrieval_finished),
-                    "reranking": _milliseconds(retrieval_finished, reranking_finished),
-                    "generation": _milliseconds(reranking_finished, generation_finished),
-                },
+        metadata: dict[str, object] = {
+            "strategy": "hybrid_rrf_cross_encoder",
+            "candidate_count": len(hybrid_results),
+            "returned_count": len(reranked),
+            "hybrid_scores": [item.score for item in supported_candidates],
+            "reranker_scores": [item.score for item in reranked],
+            "timing_ms": {
+                "retrieval": _milliseconds(started, retrieval_finished),
+                "reranking": _milliseconds(retrieval_finished, reranking_finished),
+                "generation": _milliseconds(reranking_finished, generation_finished),
             },
+        }
+        try:
+            citations = validate_citations(generated, reranked)
+        except CitationValidationError as exc:
+            metadata["answerability"] = {"status": "refused_validation_failure"}
+            metadata["citation_validation"] = {
+                "status": "rejected",
+                "reason": exc.code,
+                "validated_count": 0,
+            }
+            return QueryResult(
+                answer=REFUSAL,
+                answerable=False,
+                citations=[],
+                retrieval_metadata=metadata,
+                latency_ms=_milliseconds(started, generation_finished),
+            )
+        if not generated.answerable:
+            metadata["answerability"] = {"status": "refused_by_generator"}
+            metadata["citation_validation"] = {
+                "status": "not_applicable",
+                "validated_count": 0,
+            }
+            return QueryResult(
+                answer=REFUSAL,
+                answerable=False,
+                citations=[],
+                retrieval_metadata=metadata,
+                latency_ms=_milliseconds(started, generation_finished),
+            )
+        metadata["answerability"] = {"status": "answerable"}
+        metadata["citation_validation"] = {
+            "status": "passed",
+            "validated_count": len(citations),
+        }
+        return QueryResult(
+            answer=generated.answer,
+            answerable=True,
+            citations=citations,
+            retrieval_metadata=metadata,
             latency_ms=_milliseconds(started, generation_finished),
         )
 

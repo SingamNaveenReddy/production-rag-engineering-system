@@ -1,16 +1,49 @@
 from __future__ import annotations
 
-from app.models.schemas import Citation, ScoredChunk
+from app.models.schemas import Citation, GeneratedAnswer, ScoredChunk
 
 
-def citations_from_retrieval(results: list[ScoredChunk]) -> list[Citation]:
+class CitationValidationError(ValueError):
+    code = "citation_validation_failed"
+
+
+class FabricatedCitationError(CitationValidationError):
+    code = "fabricated_citation"
+
+
+class MissingCitationError(CitationValidationError):
+    code = "missing_citation"
+
+
+class InconsistentAnswerabilityError(CitationValidationError):
+    code = "inconsistent_answerability"
+
+
+def validate_citations(
+    generated: GeneratedAnswer, retrieved: list[ScoredChunk]
+) -> list[Citation]:
+    if not generated.answerable:
+        if generated.supporting_chunk_ids:
+            raise InconsistentAnswerabilityError(
+                "An unanswerable response must not contain supporting chunk IDs"
+            )
+        return []
+    if not generated.supporting_chunk_ids:
+        raise MissingCitationError("An answerable response requires supporting chunk IDs")
+
+    retrieved_by_id = {item.chunk.metadata.chunk_id: item.chunk for item in retrieved}
+    requested_ids = list(dict.fromkeys(generated.supporting_chunk_ids))
+    fabricated = [chunk_id for chunk_id in requested_ids if chunk_id not in retrieved_by_id]
+    if fabricated:
+        raise FabricatedCitationError(
+            f"Generated response cited chunks that were not retrieved: {fabricated}"
+        )
     return [
         Citation(
-            document=item.chunk.metadata.filename,
-            page=item.chunk.metadata.page,
-            chunk_id=item.chunk.metadata.chunk_id,
-            supporting_text=item.chunk.text[:400],
+            document=retrieved_by_id[chunk_id].metadata.filename,
+            page=retrieved_by_id[chunk_id].metadata.page,
+            chunk_id=chunk_id,
+            supporting_text=retrieved_by_id[chunk_id].text[:400],
         )
-        for item in results
+        for chunk_id in requested_ids
     ]
-

@@ -1,4 +1,4 @@
-# Phase 3 architecture
+# Phase 4 architecture
 
 ```text
 PDF / Markdown / TXT
@@ -22,12 +22,23 @@ Dense semantic ranking         BM25 lexical ranking
                            |
                            v
                  evidence threshold -> Ollama / Qwen3
+                           |
+                           v
+                 structured answer + selected chunk IDs
+                           |
+                           v
+                 answerability + citation validator
+                           |
+                 +---------+---------+
+                 |                   |
+                 v                   v
+        validated answer         fail-closed refusal
         |
         v
 Programmatically validated citations -> structured API response
 ```
 
-Provider boundaries isolate embeddings, vector storage, retrieval, reranking, and generation.
-Phase 3 sends a configurable hybrid candidate set to a Sentence Transformers CrossEncoder and only
-passes the configured top N to generation. Retrieval, reranking, generation, and total latency are
-reported separately without changing the API response schema.
+Provider boundaries isolate embeddings, vector storage, retrieval, reranking, generation, and
+validation. Phase 4 asks Ollama for schema-constrained output containing an answerability decision
+and selected chunk IDs. The validator rejects missing, invented, or inconsistent IDs and rebuilds
+all citation metadata from retrieved chunks. Validation failure returns a refusal with no citations.
