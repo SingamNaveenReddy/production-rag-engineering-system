@@ -31,4 +31,7 @@ def build_rag_service(config: AppConfig) -> RagService:
         chunk_overlap=config.chunking.chunk_overlap,
         dense_top_k=config.retrieval.dense_top_k,
         minimum_score=config.retrieval.minimum_score,
+        sparse_top_k=config.retrieval.sparse_top_k,
+        hybrid_candidate_count=config.retrieval.hybrid_candidate_count,
+        rrf_k=config.retrieval.rrf_k,
     )

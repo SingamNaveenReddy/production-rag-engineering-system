@@ -55,22 +55,33 @@ class QdrantVectorStore:
         ]
 
     def list_documents(self) -> list[DocumentSummary]:
-        records, _ = self._client.scroll(
-            collection_name=self._collection, limit=10_000, with_payload=True, with_vectors=False
-        )
         pairs = [
-            (
-                str(record.payload["metadata"]["document_id"]),
-                str(record.payload["metadata"]["filename"]),
-            )
-            for record in records
-            if record.payload
+            (chunk.metadata.document_id, chunk.metadata.filename) for chunk in self.list_chunks()
         ]
         counts = Counter(pairs)
         return [
             DocumentSummary(document_id=doc_id, filename=filename, chunk_count=count)
             for (doc_id, filename), count in sorted(counts.items())
         ]
+
+    def list_chunks(self) -> list[DocumentChunk]:
+        chunks: list[DocumentChunk] = []
+        offset = None
+        while True:
+            records, offset = self._client.scroll(
+                collection_name=self._collection,
+                limit=256,
+                offset=offset,
+                with_payload=True,
+                with_vectors=False,
+            )
+            chunks.extend(
+                DocumentChunk.model_validate(record.payload)
+                for record in records
+                if record.payload is not None
+            )
+            if offset is None:
+                return chunks
 
     def delete_document(self, document_id: str) -> bool:
         existed = self.contains_document(document_id)

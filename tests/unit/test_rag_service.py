@@ -27,7 +27,7 @@ def test_query_returns_grounded_answer_and_programmatic_citation(tmp_path: Path)
     assert result.answerable is True
     assert result.citations[0].document == "security.txt"
     assert result.citations[0].chunk_id.startswith(summary.document_id)
-    assert result.retrieval_metadata["strategy"] == "dense"
+    assert result.retrieval_metadata["strategy"] == "hybrid_rrf"
 
 
 def test_unsupported_question_is_refused(tmp_path: Path) -> None:
@@ -47,4 +47,3 @@ def test_duplicate_document_is_rejected(tmp_path: Path) -> None:
     service.ingest(source)
     with pytest.raises(DuplicateDocumentError):
         service.ingest(source)
-

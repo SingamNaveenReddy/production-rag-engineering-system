@@ -1,4 +1,4 @@
-.PHONY: setup run test lint ingest evaluate
+.PHONY: setup run test lint ingest benchmark evaluate
 
 setup:
 	python3.12 -m venv .venv
@@ -16,6 +16,8 @@ lint:
 ingest:
 	.venv/bin/python scripts/ingest.py $(FILE)
 
+benchmark:
+	.venv/bin/python scripts/benchmark_retrieval.py
+
 evaluate:
 	@echo "Evaluation is intentionally deferred until Phase 5."
-

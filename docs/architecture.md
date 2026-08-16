@@ -1,4 +1,4 @@
-# Phase 1 architecture
+# Phase 2 architecture
 
 ```text
 PDF / Markdown / TXT
@@ -8,14 +8,19 @@ PyMuPDF / UTF-8 loader -> metadata-preserving chunker
         |
         v
 Sentence Transformer embeddings -> Qdrant cosine collection
-        |
-        v
-Dense query retrieval -> evidence threshold -> Ollama / Qwen3
+        |                              |
+        v                              v
+Dense semantic ranking         BM25 lexical ranking
+        |                              |
+        +-------- reciprocal rank fusion
+                           |
+                           v
+                 evidence threshold -> Ollama / Qwen3
         |
         v
 Programmatically validated citations -> structured API response
 ```
 
-Provider boundaries isolate embeddings, vector storage, and generation so later phases can add
-hybrid retrieval or remote LLM providers without rewriting ingestion or API contracts.
-
+Provider boundaries isolate embeddings, vector storage, retrieval, and generation. Phase 2 adds
+BM25 sparse retrieval and normalized reciprocal rank fusion without changing ingestion, generation,
+or API contracts. CrossEncoder reranking remains a later phase.

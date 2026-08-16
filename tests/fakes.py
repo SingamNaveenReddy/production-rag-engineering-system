@@ -46,6 +46,9 @@ class MemoryVectorStore:
             for key, count in counts.items()
         ]
 
+    def list_chunks(self) -> list[DocumentChunk]:
+        return [chunk for chunk, _ in self.entries]
+
     def delete_document(self, document_id: str) -> bool:
         before = len(self.entries)
         self.entries = [

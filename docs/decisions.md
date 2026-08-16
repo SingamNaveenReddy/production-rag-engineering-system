@@ -17,3 +17,15 @@ providers, avoiding network calls while exercising the same service and API cont
 Chunk size and overlap are configurable. Phase 1 uses whitespace-delimited token estimates because
 the configured local LLM and embedding tokenizer may differ. A model-specific tokenizer benchmark
 is deferred until evaluation data exists.
+
+## ADR-004: BM25 plus reciprocal rank fusion in Phase 2
+
+Sparse retrieval uses BM25 over the canonical chunks persisted in Qdrant. Technical identifiers
+containing dots or hyphens remain intact during lexical tokenization. Dense and sparse rankings are
+combined using normalized reciprocal rank fusion (RRF), which avoids treating incomparable cosine
+and BM25 score scales as if they were equivalent.
+
+For the initial 30-100 document demo corpus, BM25 builds its statistics from stored chunks at query
+time. This keeps Qdrant as the source of truth and avoids a second persistence system. A larger
+deployment should persist a sparse index or Qdrant sparse vectors and benchmark index freshness,
+memory, and latency before migration.

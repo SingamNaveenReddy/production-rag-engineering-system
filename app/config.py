@@ -16,6 +16,9 @@ class ChunkingConfig(BaseModel):
 
 class RetrievalConfig(BaseModel):
     dense_top_k: int = Field(default=5, ge=1, le=100)
+    sparse_top_k: int = Field(default=5, ge=1, le=100)
+    hybrid_candidate_count: int = Field(default=30, ge=1, le=200)
+    rrf_k: int = Field(default=60, ge=1, le=1_000)
     minimum_score: float = Field(default=0.25, ge=-1, le=1)
 
 
@@ -81,4 +84,3 @@ def load_config(settings: EnvironmentSettings | None = None) -> AppConfig:
 @lru_cache(maxsize=1)
 def get_config() -> AppConfig:
     return load_config()
-

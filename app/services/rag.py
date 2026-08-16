@@ -11,6 +11,8 @@ from app.ingestion.loaders import load_document
 from app.ingestion.metadata import document_id_for
 from app.models.schemas import DocumentSummary, QueryResult
 from app.retrieval.dense import DenseRetriever
+from app.retrieval.hybrid import HybridRetriever
+from app.retrieval.sparse import SparseRetriever
 from app.vectorstore.base import VectorStore
 
 REFUSAL = "I don't have enough evidence in the provided documents to answer that question."
@@ -31,14 +33,25 @@ class RagService:
         chunk_overlap: int,
         dense_top_k: int,
         minimum_score: float,
+        sparse_top_k: int = 5,
+        hybrid_candidate_count: int = 30,
+        rrf_k: int = 60,
     ) -> None:
         self._embedder = embedder
         self._store = store
         self._generator = generator
-        self._retriever = DenseRetriever(embedder, store)
+        dense_retriever = DenseRetriever(embedder, store)
+        self._retriever = HybridRetriever(
+            dense_retriever,
+            SparseRetriever(store),
+            rrf_k=rrf_k,
+            dense_minimum_score=minimum_score,
+        )
         self._chunk_size = chunk_size
         self._chunk_overlap = chunk_overlap
         self._dense_top_k = dense_top_k
+        self._sparse_top_k = sparse_top_k
+        self._hybrid_candidate_count = hybrid_candidate_count
         self._minimum_score = minimum_score
 
     def ingest(self, path: Path) -> DocumentSummary:
@@ -61,14 +74,20 @@ class RagService:
 
     def query(self, question: str, top_k: int | None = None) -> QueryResult:
         started = perf_counter()
-        results = self._retriever.retrieve(question, top_k or self._dense_top_k)
+        requested_limit = top_k or self._dense_top_k
+        results = self._retriever.retrieve(
+            question,
+            dense_top_k=max(self._dense_top_k, self._hybrid_candidate_count),
+            sparse_top_k=max(self._sparse_top_k, self._hybrid_candidate_count),
+            limit=requested_limit,
+        )
         supported = [result for result in results if result.score >= self._minimum_score]
         if not supported:
             return QueryResult(
                 answer=REFUSAL,
                 answerable=False,
                 citations=[],
-                retrieval_metadata={"strategy": "dense", "candidate_count": len(results)},
+                retrieval_metadata={"strategy": "hybrid_rrf", "candidate_count": len(results)},
                 latency_ms=int((perf_counter() - started) * 1000),
             )
         answer = self._generator.generate(question, [item.chunk for item in supported])
@@ -77,7 +96,7 @@ class RagService:
             answerable=True,
             citations=citations_from_retrieval(supported),
             retrieval_metadata={
-                "strategy": "dense",
+                "strategy": "hybrid_rrf",
                 "candidate_count": len(results),
                 "scores": [item.score for item in supported],
             },
@@ -89,4 +108,3 @@ class RagService:
 
     def delete_document(self, document_id: str) -> bool:
         return self._store.delete_document(document_id)
-

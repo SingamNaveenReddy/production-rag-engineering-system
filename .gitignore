@@ -13,6 +13,3 @@ build/
 data/raw/*
 !data/raw/.gitkeep
 data/qdrant/
-evaluation/results/*
-!evaluation/results/.gitkeep
-
