@@ -1,12 +1,12 @@
 # Production-Grade RAG Engineering System
 
-A production-oriented document question-answering platform. Phase 5 implements metadata-preserving
+A production-oriented document question-answering platform. Phase 6 implements metadata-preserving
 ingestion, hybrid dense and BM25 retrieval, CrossEncoder reranking, grounded local generation,
-strict citations, fail-closed answerability, offline evaluation, and configurable quality gates.
+strict citations, fail-closed answerability, offline evaluation, and CI-enforced quality gates.
 
 ## Current scope
 
-Implemented through Phase 5:
+Implemented through Phase 6:
 
 - PDF, Markdown, and TXT ingestion
 - Stable content-derived document IDs and source-aware chunk IDs
@@ -25,13 +25,15 @@ Implemented through Phase 5:
 - Configurable regression thresholds with non-zero failure exit
 - Machine-readable JSON and readable Markdown reports
 - Deterministic CI profile plus a configured production-provider profile
+- Pull-request CI for lint, unit tests, integration tests, and deterministic RAG evaluation
+- CI failure when configured retrieval, grounding, citation, or refusal thresholds regress
 - Ollama-backed generation with configurable Qwen3 4B default
 - Programmatic citations derived only from retrieved chunks
 - Low-evidence refusal
 - Upload, ingest, query, list, delete, evaluate, and health API routes
 - Unit and integration tests with deterministic provider substitutes
 
-GitHub Actions, Langfuse, and Streamlit are later phases and are not claimed here.
+Langfuse and Streamlit are later phases and are not claimed here.
 
 ## Architecture
 
@@ -77,6 +79,12 @@ make test
 make lint
 ```
 
+Run the same checks used by CI locally:
+
+```bash
+make ci
+```
+
 ## Phase 2 retrieval benchmark
 
 ```bash
@@ -112,6 +120,17 @@ was `0 ms`; the configured quality gate passed. The profile uses deterministic l
 a lexical faithfulness proxy, so these are regression-fixture results rather than production-model
 quality claims. See `evaluation/results/golden_evaluation.md`.
 
+## Phase 6 CI quality gate
+
+`.github/workflows/quality-gate.yml` runs on every pull request and on pushes to `main`. It installs
+the project on Python 3.12, then runs Ruff, the unit suite, the integration suite, and the six-case
+deterministic evaluation. The evaluator reads thresholds from `config/default.yaml` and exits
+non-zero when any required metric falls below its configured minimum, so the workflow fails.
+
+The CI evaluation is deliberately network-free: it uses in-memory Qdrant plus deterministic local
+embedding, reranking, and generation substitutes. It does not require Ollama, an external Qdrant
+service, model downloads, API credentials, or the optional Ragas dependency.
+
 ## Configuration
 
 Defaults live in `config/default.yaml`; environment overrides are documented in `.env.example`.
@@ -120,9 +139,9 @@ No secrets, private documents, downloaded models, or Qdrant data belong in sourc
 ## Benchmark status
 
 Phase 2 and Phase 3 contain narrowly scoped retrieval and reranking fixtures. Phase 5 adds an
-executed six-case golden seed and threshold gate. Expanding it to a 100-question manually verified
-corpus and running the configured production providers remain required before publishing broader
-quality claims.
+executed six-case golden seed and threshold gate; Phase 6 enforces that seed on pull requests.
+Expanding it to a 100-question manually verified corpus and running the configured production
+providers remain required before publishing broader quality claims.
 
 ## Limitations
 
@@ -137,8 +156,8 @@ quality claims.
 
 ## Planned phases
 
-1. GitHub Actions and deterministic evaluation gating.
-2. Langfuse-compatible tracing and a Streamlit demonstration UI.
+1. Langfuse-compatible tracing.
+2. Streamlit demonstration UI.
 
 ## Screenshot
 

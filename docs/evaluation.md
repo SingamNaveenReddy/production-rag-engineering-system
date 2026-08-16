@@ -1,6 +1,6 @@
 # Evaluation
 
-Phase 5 implements the golden-dataset runner and configurable regression gate. The seed dataset has
+Phase 6 enforces the Phase 5 golden-dataset runner as a pull-request regression gate. The seed has
 six manually verified cases: four answerable policy questions and two unsupported questions. It is
 an executable framework seed, not the final 100-question production corpus.
 
@@ -44,3 +44,22 @@ are not presented as production-model quality.
 
 Earlier executed retrieval and reranking fixtures remain in `evaluation/results/phase2_retrieval.*`
 and `evaluation/results/phase3_reranking.*`.
+
+## Pull-request quality gate
+
+`.github/workflows/quality-gate.yml` runs for every pull request and push to `main`. Its single
+read-only job performs these checks in order:
+
+1. Ruff linting.
+2. Unit tests under `tests/unit`.
+3. Integration tests under `tests/integration`.
+4. `python -m evaluation.evaluate --profile deterministic`.
+
+The final command reads `evaluation.thresholds` from `config/default.yaml`. Each threshold failure
+is written into the JSON and Markdown reports and the command exits with status 1. That non-zero
+status fails the GitHub Actions job. The deterministic profile avoids credentials, hosted models,
+network services, and model downloads, keeping the pull-request check reproducible and practical.
+
+Run the complete gate locally with `make ci`. Repository branch-protection settings should require
+the `Lint, tests, and deterministic evaluation` check before merging; that GitHub repository setting
+is intentionally not mutated by application code.

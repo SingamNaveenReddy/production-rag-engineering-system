@@ -1,4 +1,4 @@
-# Phase 5 architecture
+# Phase 6 architecture
 
 ```text
 PDF / Markdown / TXT
@@ -42,6 +42,9 @@ Programmatically validated citations -> structured API response
                            |
                            v
                    JSON + Markdown reports
+                           |
+                           v
+              GitHub Actions pull-request gate
 ```
 
 Provider boundaries isolate embeddings, vector storage, retrieval, reranking, generation, and
@@ -53,3 +56,7 @@ Phase 5 evaluates the same query service through a provider-neutral runner. Gold
 expected answerability and sources. The runner measures retrieval recall@k, faithfulness, citation
 accuracy, refusal accuracy, and latency, then applies configurable thresholds and emits JSON and
 Markdown reports.
+
+Phase 6 executes that deterministic evaluation after lint, unit, and integration checks in GitHub
+Actions. The workflow uses read-only repository permissions and no secrets. A metric regression
+causes the evaluator to exit non-zero, which fails the CI check.
